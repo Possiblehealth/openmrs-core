@@ -549,11 +549,12 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 			log.debug("Merge operation cancelled: Cannot merge user" + preferred.getPatientId() + " to self");
 			throw new APIException("Patient.merge.cancelled", new Object[] { preferred.getPatientId() });
 		}
-		List<Order> orders = Context.getOrderService().getAllOrdersByPatient(notPreferred);
-		for (Order order : orders) {
-			if (!order.isVoided()) {
-				throw new APIException("Patient.cannot.merge", (Object[]) null);
-			}
+		List<Order> ordersForNonPreferred = Context.getOrderService().getAllOrdersByPatient(notPreferred);
+		List<Order> ordersForPreferred = Context.getOrderService().getAllOrdersByPatient(preferred);
+		boolean nonPreferredHasActiveOrder = ordersForNonPreferred.stream().anyMatch(Order::isActive);
+		boolean preferredHasActiveOrder = ordersForPreferred.stream().anyMatch(Order::isActive);
+		if(nonPreferredHasActiveOrder && preferredHasActiveOrder){
+			throw new APIException("Patient.cannot.merge", (Object[]) null);
 		}
 		PersonMergeLogData mergedData = new PersonMergeLogData();
 		mergeVisits(preferred, notPreferred, mergedData);
@@ -583,7 +584,7 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 		// Save the newly update preferred patient
 		// This must be called _after_ voiding the nonPreferred patient so that
 		//  a "Duplicate Identifier" error doesn't pop up.
-		savePatient(preferred);
+  		savePatient(preferred);
 		
 		//save the person merge log
 		PersonMergeLog personMergeLog = new PersonMergeLog();

@@ -10,6 +10,7 @@
 package org.openmrs.api;
 
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
@@ -3304,15 +3305,39 @@ public class PatientServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
-	 * @verifies fail if not preferred patient has unvoided orders
+	 * @verifies fail if more than one patient has active orders
 	 * @see PatientService#mergePatients(org.openmrs.Patient, org.openmrs.Patient)
 	 */
 	@Test
-	public void mergePatients_shouldFailIfNotPreferredPatientHasUnvoidedOrders() throws Exception {
+	public void mergePatients_shouldFailIfMoreThanOnePatientHasActiveOrders() throws Exception {
 		expectedException.expect(APIException.class);
 		expectedException.expectMessage(Matchers.is(Context.getMessageSourceService().getMessage("Patient.cannot.merge")));
-		Patient preferredPatient = patientService.getPatient(8);
+		Patient preferredPatient = patientService.getPatient(2);
 		Patient notPreferredPatient = patientService.getPatient(7);
+		patientService.mergePatients(preferredPatient, notPreferredPatient);
+	}
+
+	/**
+	 * @verifies should not fail if preferred patient has active orders
+	 * @see PatientService#mergePatients(org.openmrs.Patient, org.openmrs.Patient)
+	 */
+	@Test
+	public void mergePatients_shouldNotFailIfPreferredPatientHasActiveOrders() throws Exception {
+		Patient preferredPatient = patientService.getPatient(2);
+		Patient notPreferredPatient = patientService.getPatient(7);
+		voidOrders(Collections.singleton(notPreferredPatient));
+		patientService.mergePatients(preferredPatient, notPreferredPatient);
+	}
+
+	/**
+	 * @verifies should not fail if not preferred patient has active orders
+	 * @see PatientService#mergePatients(org.openmrs.Patient, org.openmrs.Patient)
+	 */
+	@Test
+	public void mergePatients_shouldNotFailIfNotPreferredPatientHasActiveOrders() throws Exception {
+		Patient preferredPatient = patientService.getPatient(2);
+		Patient notPreferredPatient = patientService.getPatient(7);
+		voidOrders(Collections.singleton(preferredPatient));
 		patientService.mergePatients(preferredPatient, notPreferredPatient);
 	}
 }
